@@ -18,7 +18,8 @@ panel <- dat |>
   inner_join(target, by = "date")
 
 # months should be consecutive, otherwise lag() would skip periods
-stopifnot(all(diff(interval(min(panel$date), panel$date) %/% months(1)) == 1))
+stopifnot(nrow(panel) == length(seq(min(panel$date), max(panel$date),
+                                    by = "month")))
 
 ## predictors ##
 # everything except the date and the price level (not stationary)
@@ -28,27 +29,24 @@ x_vars <- setdiff(names(dat), c("date", "sp500"))
 start_date <- as.Date("1960-01-01") # first months lost to differencing
 end_date <- max(panel$date)
 
-first_obs <- sapply(x_vars, function(v) {
-  as.character(min(panel$date[!is.na(panel[[v]])]))
-})
-last_obs <- sapply(x_vars, function(v) {
-  as.character(max(panel$date[!is.na(panel[[v]])]))
-})
+# row position of the first and last non-missing value of each predictor
+first_i <- sapply(panel[x_vars], function(v) which(!is.na(v))[1])
+last_i <- sapply(panel[x_vars], function(v) tail(which(!is.na(v)), 1))
 
 avail <- data.frame(var = x_vars,
-                    first_obs = as.Date(first_obs),
-                    last_obs = as.Date(last_obs),
-                    n_na = colSums(is.na(panel[, x_vars])))
+                    first_obs = panel$date[first_i],
+                    last_obs = panel$date[last_i],
+                    n_na = colSums(is.na(panel[x_vars])))
 
-problem <- avail |>
+incomplete <- avail |>
   filter(first_obs > start_date | last_obs < end_date) |>
   arrange(desc(first_obs))
-print(problem, row.names = FALSE)
+print(incomplete, row.names = FALSE)
 
-late <- problem$var
-panel <- panel |> select(-all_of(late))
-x_vars <- setdiff(x_vars, late)
-length(x_vars) # predictors left
+drop_vars <- incomplete$var
+panel <- panel |> select(-all_of(drop_vars))
+x_vars <- setdiff(x_vars, drop_vars)
+print(length(x_vars)) # predictors left
 
 ## lags ##
 n_lags <- 6
@@ -67,22 +65,22 @@ state_lags <- lapply(1:n_lags, function(k) make_lags(panel, "state", k))
 
 panel_lags <- bind_cols(panel, lag_list, state_lags)
 
-dim(panel_lags)
+print(dim(panel_lags))
 
 ## missing data ##
-# anything left in the raw predictors?
-na_x <- colSums(is.na(panel[, x_vars]))
-sort(na_x[na_x > 0], decreasing = TRUE)
+# anything left in the predictors from the start date onwards?
+na_x <- colSums(is.na(filter(panel, date >= start_date)[x_vars]))
+print(sort(na_x[na_x > 0], decreasing = TRUE))
 
-# first month with no missing values at all, after adding lags
+# rows with no missing values at all, after adding lags
 complete <- complete.cases(panel_lags)
-min(panel_lags$date[complete])
-sum(complete)
+print(min(panel_lags$date[complete])) # first usable month
+print(sum(complete))
 
 # targets should have no missing values in this window
-colSums(is.na(panel[, c("state", "y_h1", "y_h3", "y_h6")]))
+print(colSums(is.na(panel[c("state", "y_h1", "y_h3", "y_h6")])))
 
 ## save ##
 panel_final <- panel_lags[complete, ]
-dim(panel_final)
+print(dim(panel_final))
 write.csv(panel_final, "data/panel.csv", row.names = FALSE)
