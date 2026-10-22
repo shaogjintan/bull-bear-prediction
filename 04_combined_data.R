@@ -20,12 +20,38 @@ panel <- dat |>
 # months should be consecutive, otherwise lag() would skip periods
 stopifnot(all(diff(interval(min(panel$date), panel$date) %/% months(1)) == 1))
 
+## predictors ##
+# everything except the date and the price level (not stationary)
+x_vars <- setdiff(names(dat), c("date", "sp500"))
+
+## availability: drop predictors that do not cover the whole sample ##
+start_date <- as.Date("1960-01-01") # first months lost to differencing
+end_date <- max(panel$date)
+
+first_obs <- sapply(x_vars, function(v) {
+  as.character(min(panel$date[!is.na(panel[[v]])]))
+})
+last_obs <- sapply(x_vars, function(v) {
+  as.character(max(panel$date[!is.na(panel[[v]])]))
+})
+
+avail <- data.frame(var = x_vars,
+                    first_obs = as.Date(first_obs),
+                    last_obs = as.Date(last_obs),
+                    n_na = colSums(is.na(panel[, x_vars])))
+
+problem <- avail |>
+  filter(first_obs > start_date | last_obs < end_date) |>
+  arrange(desc(first_obs))
+print(problem, row.names = FALSE)
+
+late <- problem$var
+panel <- panel |> select(-all_of(late))
+x_vars <- setdiff(x_vars, late)
+length(x_vars) # predictors left
+
 ## lags ##
 n_lags <- 6
-
-# predictors: everything except the date, the price level (not stationary)
-# and the targets
-x_vars <- setdiff(names(dat), c("date", "sp500"))
 
 make_lags <- function(df, vars, k) {
   df |>
@@ -44,19 +70,19 @@ panel_lags <- bind_cols(panel, lag_list, state_lags)
 dim(panel_lags)
 
 ## missing data ##
-# raw predictors (before lagging)
+# anything left in the raw predictors?
 na_x <- colSums(is.na(panel[, x_vars]))
 sort(na_x[na_x > 0], decreasing = TRUE)
 
-# first month where all predictors are available
-complete <- complete.cases(panel[, x_vars])
-min(panel$date[complete])
+# first month with no missing values at all, after adding lags
+complete <- complete.cases(panel_lags)
+min(panel_lags$date[complete])
 sum(complete)
-
-# after adding lags, first row with no missing values at all
-complete_lags <- complete.cases(panel_lags)
-min(panel_lags$date[complete_lags])
-sum(complete_lags)
 
 # targets should have no missing values in this window
 colSums(is.na(panel[, c("state", "y_h1", "y_h3", "y_h6")]))
+
+## save ##
+panel_final <- panel_lags[complete, ]
+dim(panel_final)
+write.csv(panel_final, "data/panel.csv", row.names = FALSE)
