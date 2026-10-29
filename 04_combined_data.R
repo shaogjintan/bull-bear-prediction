@@ -64,8 +64,6 @@ lag_list <- lapply(1:n_lags, function(k) make_lags(panel, x_vars, k))
 state_lags <- lapply(1:n_lags, function(k) make_lags(panel, "state", k))
 
 panel_lags <- bind_cols(panel, lag_list, state_lags)
-# add more panel lags
-panel_lags <- panel_lags |> mutate(S.P.div.yield_l8 = lag(S.P.div.yield_l6, 2))
 
 print(dim(panel_lags))
 
