@@ -1,0 +1,5 @@
+"period","from","to","months","bull","bear","bear_share","bear_markets"
+"Before validation",1960-07-01,1985-11-01,305,270,35,0.115,4
+"Boosting validation",1985-12-01,2001-05-01,186,171,15,0.081,2
+"Test",2001-06-01,2025-12-01,295,246,49,0.166,4
+"Full sample",1960-07-01,2025-12-01,786,687,99,0.126,9
