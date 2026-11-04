@@ -9,24 +9,26 @@ data$ddp_l2 <- c(rep(NA, 2), head(data$ddp, -2))
 #We wish to predict the 1, 3, 6-step ahead forecast
 forecast_horizons <- c(1, 3, 6)
 
-for (h in forecast_horizons){
-  testrows <- which(data$date >= as.Date("2001-06-01"))
-  prob = rep(NA, length(testrows))
-  y <- paste0("y_h", h)
-  ddp_var <- paste0("ddp_l", 8-h)
+windows <- c(480, 300) #40-year and 25-year rolling windows, same as the ML models
+testrows <- which(data$date >= as.Date("2001-06-01"))
 
-  #Rolling window of 480 months forms the training set
-  for(k in 1:length(testrows)){
-    i <- testrows[k]
-    last_train <- i-h
-    traindata <- data[(last_train-479):last_train,]
-    model <- glm(as.formula(paste(y, "~ state + ret_m + tms + ", ddp_var)), data = traindata, family = binomial(link="logit"))
-    prob[k] <- predict(model, newdata = data[i,], type = "response")
-
+for (W in windows){
+  for (h in forecast_horizons){
+    prob = rep(NA, length(testrows))
+    y <- paste0("y_h", h)
+    ddp_var <- paste0("ddp_l", 8-h)
+    
+    #Rolling window of W months forms the training set
+    for(k in 1:length(testrows)){
+      i <- testrows[k]
+      last_train <- i-h
+      traindata <- data[(last_train-W+1):last_train,]
+      model <- glm(as.formula(paste(y, "~ state + ret_m + tms + ", ddp_var)), data = traindata, family = binomial(link="logit"))
+      prob[k] <- predict(model, newdata = data[i,], type = "response")
+    }
+    
+    #save the predictions into results folder with one file per window and horizon
+    res <- data.frame(date = data$date[testrows], actual = data[[y]][testrows], prob = prob)
+    write.csv(res, sprintf("results/logit_h%d_w%d.csv", h, W), row.names = FALSE)
   }
-
-  #save the predictions into results folder with one file per horizon
-  res <- data.frame(date = data$date[testrows], actual = data[[y]][testrows], prob = prob)
-  write.csv(res, paste0("results/logit_h", h, ".csv"), row.names = FALSE)
-
 }
