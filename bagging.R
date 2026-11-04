@@ -1,52 +1,51 @@
 library(dplyr)
-library(hdm)
-data = read.csv("data/panel.csv")
-
 library(randomForest)
 
-horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
-nprev = 295
+data = read.csv("data/panel.csv")
+dir.create("results", showWarnings = FALSE)
+set.seed(4308)
 
-runrf=function(y, X,lag,pl){
+windows = c(480, 300) #40 and 25 year rolling windows
+horizons = c(1, 3, 6) #1,3,6 step-ahead forecasts
+nprev = 295 #number of out-of-sample observations (Jun 2001 - Dec 2025)
+
+#lag 0 columns that are known at the end of the month, the other lag 0 columns (FRED, Goyal) are published later
+keep_lag0 = c("ret_m", "dtoy", "dtoat", "svar", "tms", "dfy", "state")
+lag0_cols = names(data)[!grepl("_l[0-9]+$", names(data))] #columns without an _l1.._l6 suffix
+dropped_columns = unique(c("date", "sp500", "y_h1", "y_h3", "y_h6",
+                           setdiff(lag0_cols, keep_lag0)))
+X_all = as.matrix(select(data, -all_of(dropped_columns))) #Matrix of regressors, same as rf.R
+
+runbagging=function(y, X,lag){
   X_train= X[1:(nrow(X)-lag),] #drop the last h rows such that they are not used to train the model (to prevent leakage)
   y_train = factor(y[1:(nrow(X)-lag)], levels=c(0,1))
-  X_test = X[nrow(X),,drop = FALSE] # Regressors that are used for the forecast
-  model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = ncol(X_train))   
-  pred=predict(model,newdata=X_test,type="prob")[, "1"] # Generate the forecast
-  return(list("model"=model,"pred"=pred)) # Return the estimated model and h-step forecast
+  X_test = X[nrow(X),,drop = FALSE] #Regressors that are used for the forecast
+  model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = ncol(X_train))
+  pred=predict(model,newdata=X_test,type="prob")[, "1"] #Generate the forecast
+  return(list("model"=model,"pred"=pred)) #Return the estimated model and h-step forecast
 }
 
 
-rf.rolling.window=function(data,nprev,lag,pl=FALSE){
-  rollingwindow_size = 480 # Number of observations used in the model
-  save.pred = numeric(nprev)  
-  dropped_columns = c("date","sp500", "y_h1", "y_h3", "y_h6")
-  X = select(data, -all_of(dropped_columns)) # Matrix of regressors
-  y = data[[paste0("y_h", lag)]] # Vector of target variable (y_h1, y_h3, y_h6) to be forecasted
-  for(i in nprev:1){ 
-    y.window=y[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1)] # Define the estimation window 
-    X.window=X[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1),] 
-    X.window = as.matrix(X.window)
-    rf=runrf(y.window,X.window,lag,pl) #  Fit rlassologit and predict
-    save.pred[(1+nprev-i)]=rf$pred # Save the forecast
+bagging.rolling.window=function(data,nprev,lag,rollingwindow_size){
+  save.pred = numeric(nprev)
+  X = X_all
+  y = data[[paste0("y_h", lag)]] 
+  for(i in nprev:1){
+    y.window=y[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1)] #Define the estimation window
+    X.window=X[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1),]
+    bag=runbagging(y.window,X.window,lag) #Fit bagging and predict
+    save.pred[(1+nprev-i)]=bag$pred #Save the forecast
     cat("iteration",(1+nprev-i),"\n") #display iteration number
   }
   return(save.pred)
 }
 
-bagging1 = rf.rolling.window(data, 295, 1)
-bagging1_pred = factor(as.numeric(bagging1 > 0.5), levels=c(0,1))
-actual1 = factor(tail(data$y_h1, 295), levels=c(0,1))
-
-bagging3 = rf.rolling.window(data, 295, 3)
-bagging3_pred = factor(as.numeric(bagging3 > 0.5), levels=c(0,1))
-actual3 = factor(tail(data$y_h3, 295), levels=c(0,1))
-
-bagging6 = rf.rolling.window(data, 295, 6)
-bagging6_pred = factor(as.numeric(bagging6 > 0.5), levels=c(0,1))
-actual6 = factor(tail(data$y_h6, 295), levels=c(0,1))
-
-cm_bagging1 = confusionMatrix(bagging1_pred,actual1)
-cm_bagging3 = confusionMatrix(bagging3_pred,actual3)
-cm_bagging6 = confusionMatrix(bagging6_pred,actual6)
-
+#run for both windows and all horizons, one file per window and horizon
+for (W in windows) {
+  for (h in horizons) {
+    prob = bagging.rolling.window(data, nprev, h, W)
+    actual = tail(data[[paste0("y_h", h)]], nprev)
+    res = data.frame(date = tail(data$date, nprev), actual = actual, prob = prob)
+    write.csv(res, sprintf("results/bagging_h%d_w%d.csv", h, W), row.names = FALSE)
+  }
+}
