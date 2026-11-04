@@ -1,5 +1,5 @@
-data <- read.csv("panel.csv")
-library(ROCR)
+data <- read.csv("data/panel.csv")
+library(pROC)
 
 #Nyberg uses the 8th lag of the first difference of the dividend-price ratio
 data$ddp <- c(NA, diff(data$gw_d.p))
@@ -29,6 +29,8 @@ for (h in forecast_horizons){
   #Evaluation metrics
   res <- data.frame(date = data$date[testrows], actual = data[[y]][testrows], prob = prob)
   res$forecast <- ifelse(res$prob >= 0.5, 1, 0)
+  #save the predictions into results folder with one file per horizon
+  write.csv(res, paste0("results/logit_h", h, ".csv"), row.names = FALSE)
   confusion.matrix <- table(factor(res$actual, levels = c(0, 1)),factor(res$forecast, levels = c(0, 1)))
   
   FP <- confusion.matrix["0", "1"]
@@ -41,9 +43,8 @@ for (h in forecast_horizons){
   F1score <- 2*(precision*recall)/(precision+recall)
   
   
-  pred <- prediction(res$prob, res$actual)
-  roc <- performance(pred, "tpr", "fpr")
-  auc <- performance(pred, "auc")@y.values[[1]]
+  roc_h <- roc(response = res$actual, predictor = res$prob, levels = c(0, 1), direction = "<")
+  auc_h <- as.numeric(auc(roc_h))
   
   cat("\nForecast horizon:", h, "months\n")
   print(confusion.matrix)
@@ -51,7 +52,8 @@ for (h in forecast_horizons){
   cat("Precision:", precision, "\n")
   cat("Recall:", recall, "\n")
   cat("F1 score:", F1score, "\n")
-  cat("AUC:", auc, "\n")
-}
+  cat("AUC:", auc_h, "\n")
+  
 
+}
 
