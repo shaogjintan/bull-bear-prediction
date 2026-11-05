@@ -21,11 +21,10 @@ horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 nprev_test = 295
 test_start_row = nrow(data) - nprev_test + 1
 
-# Validation window: from the first origin with a full window (for h up to 6) to the month before the test
+# Validation window: from the first origin with a full window (for h up to 6) to h months before the test,
+# so every validation target (the state h months later) is already known when the test starts
 val_start_row = rollingwindow_size + 6
-val_end_row = test_start_row - 1
-nprev_val = val_end_row - val_start_row + 1 # Number of observations in the validation window
-cat("Validation:", format(data$date[val_start_row]), "to", format(data$date[val_end_row]), "\n")
+cat("Validation start:", format(data$date[val_start_row]), "\n")
 cat("Test:", format(data$date[test_start_row]), "to", format(data$date[nrow(data)]), "\n")
 
 ## predictors (X) ##
@@ -81,8 +80,10 @@ boosting.rolling.window=function(data,nprev,lag,end_row,params,nrounds){
 ## 1. tune the number of trees on the validation window, using AUC, for each horizon and depth ##
 tune.boosting=function(lag,d){
   y = data[[paste0("y_h", lag)]]
-  actual_val = y[val_start_row:val_end_row]
-  p = boosting.rolling.window(data, nprev_val, lag, val_end_row, parameters(d), nrounds_grid)
+  val_end = test_start_row - lag # last validation origin: its target (state at test start) is known at the first test origin
+  nprev_val = val_end - val_start_row + 1
+  actual_val = y[val_start_row:val_end]
+  p = boosting.rolling.window(data, nprev_val, lag, val_end, parameters(d), nrounds_grid)
   auc = apply(p, 2, function(s) as.numeric(auc(roc(response = actual_val, predictor = s,
                                                    levels = c(0, 1), direction = "<", quiet = TRUE))))
   return(data.frame(lag = lag, depth = d, nrounds = nrounds_grid, val_auc = auc))
@@ -90,7 +91,7 @@ tune.boosting=function(lag,d){
 
 tuning = data.frame()
 for(lag in horizons){
-  cat("validation bear months, h =", lag, ":", sum(data[[paste0("y_h", lag)]][val_start_row:val_end_row]), "\n")
+  cat("validation bear months, h =", lag, ":", sum(data[[paste0("y_h", lag)]][val_start_row:(test_start_row - lag)]), "\n")
   for(d in depths){
     tuning = rbind(tuning, tune.boosting(lag,d))
   }
