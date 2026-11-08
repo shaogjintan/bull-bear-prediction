@@ -22,7 +22,8 @@ for (f in files){
 }
 preds$loss <- (preds$prob - preds$actual)^2
 
-model_order <- c("persistence", "logit", "rlasso", "rf", "bagging", "boost_d2", "boost_d5")
+model_order <- c("persistence", "logit", "rlasso", "rf", "bagging", "boost_d2", "boost_d5",
+                 "ensemble_avg", "ensemble_vote")
 models <- intersect(model_order, unique(preds$model))
 
 out <- data.frame()
@@ -62,7 +63,8 @@ dq <- if ("loss" %in% names(out)) out[out$loss == "qps", ] else out
 lossvar <- if ("qps" %in% names(preds)) "qps" else "loss"
 model_label <- c(persistence = "Persistence", logit = "Logit", rlasso = "rlassologit",
                  rf = "Random forest", bagging = "Bagging", boost_d2 = "Boosting d=2",
-                 boost_d5 = "Boosting d=5")
+                 boost_d5 = "Boosting d=5", ensemble_avg = "Average of models",
+                 ensemble_vote = "Majority vote")
 cols <- c(rlasso = "#1b9e77", rf = "#d95f02", bagging = "#7570b3",
           boost_d2 = "#e7298a", boost_d5 = "#66a61e")
 
