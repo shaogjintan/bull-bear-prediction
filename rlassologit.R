@@ -11,7 +11,7 @@ dir.create("results", showWarnings = FALSE)
 # settings
 horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 nprev = 295 # number of test months
-windows  <- c(480, 300)
+windows  <- c(300)
 
 ## predictors (X) ##
 # lag-0 columns kept: market variables, known at month end
@@ -42,6 +42,7 @@ runrlassologit=function(y, X, lag){
 
 rlassologit.rolling.window=function(data,nprev,lag,rollingwindow_size){
   save.pred = numeric(nprev)
+  save.selected = vector("list", nprev)
   X = X_all # regressors built at the top (lag-0 macro/Goyal and state already dropped)
   y = data[[paste0("y_h", lag)]] # Vector of target variable (y_h1, y_h3, y_h6) to be forecasted
   for(i in nprev:1){ 
@@ -49,20 +50,39 @@ rlassologit.rolling.window=function(data,nprev,lag,rollingwindow_size){
     X.window=X[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1),] 
     lassologit=runrlassologit(y.window,X.window,lag) #  Fit rlassologit and predict
     save.pred[(1+nprev-i)]=lassologit$pred # Save the forecast
+    b = lassologit$model$coefficients[-1]
+    save.selected[[1+nprev-i]] = names(b)[b != 0]
     cat("iteration",(1+nprev-i),"\n") #display iteration number
   }
-  return(save.pred)
+  return(list("pred"=save.pred,"selected"=save.selected)) # CHANGED: was return(save.pred)
 }
 
 ## run: 2 windows x 3 horizons, save each to results/ ##
 for (W in windows) {
   for (h in horizons) {
-    prob   = rlassologit.rolling.window(data, nprev, h, W)
+    out    = rlassologit.rolling.window(data, nprev, h, W)
+    prob   = out$pred
     actual = tail(data[[paste0("y_h", h)]], nprev)
-    res    = data.frame(date = tail(data$date, nprev), actual = actual, prob = prob)
+    dates  = tail(data$date, nprev)
+    res    = data.frame(date = dates, actual = actual, prob = prob)
     write.csv(res, sprintf("results/rlasso_h%d_w%d.csv", h, W), row.names = FALSE)
+    # variables selected in each window, one row per selected variable
+    selected = data.frame(date = rep(dates, lengths(out$selected)), variable = unlist(out$selected))
+    write.csv(selected, sprintf("results/rlasso_selected_w%d_h%d.csv", W, h), row.names = FALSE)
   }
 }
+## selection frequency: % of windows where any lag of a variable is selected ##
+W = 300
+sel_all = do.call(rbind, lapply(horizons, function(h) {
+  s = read.csv(sprintf("results/rlasso_selected_w%d_h%d.csv", W, h)); s$h = h; s }))
+sel_all$base = sub("_l[0-9]+$", "", sel_all$variable) # group the lags of each variable
+freq = sel_all |> distinct(h, date, base) |> count(h, base) |> mutate(pct = round(100 * n / nprev, 1))
+tab = tidyr::pivot_wider(freq, id_cols = base, names_from = h, values_from = pct, values_fill = 0, names_prefix = "h")
+tab = tab[order(-rowSums(tab[, c("h1", "h3", "h6")])), c("base", "h1", "h3", "h6")]
+write.csv(tab, sprintf("tables/rlasso_selection_frequency_w%d.csv", W), row.names = FALSE)
+print(as.data.frame(head(tab, 15)))
+print(sel_all |> count(h) |> mutate(avg_selected = n / nprev)) # average number of variables per window
+
 
 #checks
 # AUC without extra packages
@@ -71,7 +91,7 @@ auc_fn <- function(prob, actual) {
   (sum(r[actual == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
 }
 
-for (f in list.files("results", pattern = "^rlasso_.*\\.csv$", full.names = TRUE)) {
+for (f in list.files("results", pattern = "^rlasso_h.*\\.csv$", full.names = TRUE)) {
   d <- read.csv(f)
   pred <- as.integer(d$prob > 0.5)
   cat(sprintf("%-25s rows=%d  %s to %s  NA=%d  prob %.3f-%.3f  AUC=%.3f  bears caught=%d/%d  false alarms=%d\n",
