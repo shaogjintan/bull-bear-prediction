@@ -2,7 +2,6 @@ portfolio <- read.csv("data/portfolio_data.csv")
 portfolio$date <- as.Date(portfolio$date)
 
 panel <- read.csv("data/panel.csv")
-threshold <- mean(panel$state[1:300] == 1)
 
 files <- c("results/bagging_h1_w300.csv", "results/boost_d2_h1_w300.csv", "results/boost_d5_h1_w300.csv",
            "results/ensemble_avg_h1_w300.csv", "results/ensemble_vote_h1_w300.csv", "results/logit_h1_w300.csv",
@@ -46,6 +45,10 @@ evaluate <- function(s, rf) {
   ))
 }
 
+#Buy-and-Hold benchmark
+bh <- portfolio[portfolio$date >= as.Date("2001-07-01") & portfolio$date <= as.Date("2025-12-01"), ]
+comparison <- rbind(Buy_Hold = evaluate(bh$spy_ret, bh$rf))
+
 for (f in files){
   pred <- read.csv(f)
   pred$date <- as.Date(pred$date)
@@ -54,32 +57,27 @@ for (f in files){
   pred$date <- seq(pred$date[1], by = "month", length.out = nrow(pred) + 1)[-1]
   results <- merge(pred, portfolio, by = "date")
   
-  results <- results[
-    results$date >= as.Date("2010-01-01") &
-      results$date <= as.Date("2025-12-01"), ]
+  results <- results[results$date >= as.Date("2001-06-01") & results$date <= as.Date("2025-12-01"), ]
   
-  #The 3 different strategies
   #Strategy 1: If probability of bear market is above 0.5, then switch to risk-free
-  results$s1 <- ifelse(results$prob < 0.5,
-                       results$spy_ret,
-                       results$rf)
+  results$s1 <- ifelse(results$prob < 0.5, results$spy_ret, results$rf)
   
   #Strategy 2: To use a different threshold than 0.5 since bear markets are rare
-  #Proportion of bear markets in training data of 480 months 
-  panel <- read.csv("data/panel.csv")
+  #Proportion of bear markets in training data of 300 months 
+  results$threshold <- NA
+  
+  for (j in 1:nrow(results)) {
+    i <- match(results$date[j], panel$date)
+    results$threshold[j] <- mean(panel$y_h1[(i - 301):(i - 2)]
+    )
+  }
   
   #If probability of bear market is above the threshold, then switch to risk-free
-  results$s2 <- ifelse(results$prob < threshold,
-                       results$spy_ret,
-                       results$rf)
-  
-  #Strategy 3: Buy and Hold
-  results$s3 <- results$spy_ret
+  results$s2 <- ifelse(results$prob < results$threshold, results$spy_ret, results$rf)
   
   temp <- rbind(
-    Buy_Hold = evaluate(results$s3, results$rf),
     Threshold_0.5 = evaluate(results$s1, results$rf),
-    Threshold_0.117 = evaluate(results$s2, results$rf)
+    Threshold_rolling = evaluate(results$s2, results$rf)
   )
   rownames(temp) <- paste(basename(f), rownames(temp), sep = "_")
   comparison <- rbind(comparison, temp)
