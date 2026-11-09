@@ -1,37 +1,14 @@
 portfolio <- read.csv("data/portfolio_data.csv")
-pred <- read.csv("results/bagging_h1_w300.csv")
-
 portfolio$date <- as.Date(portfolio$date)
-pred$date <- as.Date(pred$date)
 
-#shifting the dates by one month to decide current strategy based on one-step ahead forecast
-pred$date <- seq(as.Date("2001-07-01"),
-                 by = "month",
-                 length.out = nrow(pred))
-results <- merge(pred, portfolio, by = "date")
-
-results <- results[
-  results$date >= as.Date("2001-07-01") &
-    results$date <= as.Date("2025-12-01"), ]
-
-#The 3 different strategies
-#Strategy 1: If probability of bear market is above 0.5, then switch to risk-free
-results$s1 <- ifelse(results$prob < 0.5,
-                        results$spy_ret,
-                        results$rf)
-
-#Strategy 2: To use a different threshold than 0.5 since bear markets are rare
-#Proportion of bear markets in training data of 480 months 
 panel <- read.csv("data/panel.csv")
-mean(panel$state[1:480] == 1)
+threshold <- mean(panel$state[1:300] == 1)
 
-#If probability of bear market is above 0.0979, then switch to risk-free
-results$s2 <- ifelse(results$prob < 0.0979,
-                        results$spy_ret,
-                        results$rf)
+files <- c("results/bagging_h1_w300.csv", "results/boost_d2_h1_w300.csv", "results/boost_d5_h1_w300.csv",
+           "results/ensemble_avg_h1_w300.csv", "results/ensemble_vote_h1_w300.csv", "results/logit_h1_w300.csv",
+           "results/persistence_h1.csv", "results/rf_h1_w300.csv", "results/rlasso_h1_w300.csv")
 
-#Strategy 3: Buy and Hold
-results$s3 <- results$spy_ret
+comparison <- data.frame()
 
 evaluate <- function(s, rf) {
   n <- length(s)
@@ -69,11 +46,44 @@ evaluate <- function(s, rf) {
   ))
 }
 
-comparison <- rbind(
-  Buy_Hold = evaluate(results$s3, results$rf),
-  Threshold_0.5 = evaluate(results$s1, results$rf),
-  Threshold_0.0979 = evaluate(results$s2, results$rf)
-)
+for (f in files){
+  pred <- read.csv(f)
+  pred$date <- as.Date(pred$date)
+  
+  #shifting the dates by one month to decide current strategy based on one-step ahead forecast
+  pred$date <- seq(pred$date[1], by = "month", length.out = nrow(pred) + 1)[-1]
+  results <- merge(pred, portfolio, by = "date")
+  
+  results <- results[
+    results$date >= as.Date("2010-01-01") &
+      results$date <= as.Date("2025-12-01"), ]
+  
+  #The 3 different strategies
+  #Strategy 1: If probability of bear market is above 0.5, then switch to risk-free
+  results$s1 <- ifelse(results$prob < 0.5,
+                       results$spy_ret,
+                       results$rf)
+  
+  #Strategy 2: To use a different threshold than 0.5 since bear markets are rare
+  #Proportion of bear markets in training data of 480 months 
+  panel <- read.csv("data/panel.csv")
+  
+  #If probability of bear market is above the threshold, then switch to risk-free
+  results$s2 <- ifelse(results$prob < threshold,
+                       results$spy_ret,
+                       results$rf)
+  
+  #Strategy 3: Buy and Hold
+  results$s3 <- results$spy_ret
+  
+  temp <- rbind(
+    Buy_Hold = evaluate(results$s3, results$rf),
+    Threshold_0.5 = evaluate(results$s1, results$rf),
+    Threshold_0.117 = evaluate(results$s2, results$rf)
+  )
+  rownames(temp) <- paste(basename(f), rownames(temp), sep = "_")
+  comparison <- rbind(comparison, temp)
+}
 
 #Convert returns to percentages
 comparison[, "Annual_Return"] <- comparison[, "Annual_Return"] * 100
@@ -81,3 +91,5 @@ comparison[, "CAGR"] <- comparison[, "CAGR"] * 100
 comparison[, "Max_Drawdown"] <- comparison[, "Max_Drawdown"] * 100
 
 print(round(comparison, 2))
+
+
