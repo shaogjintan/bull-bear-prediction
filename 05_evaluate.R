@@ -149,18 +149,41 @@ legend("topleft", legend = model_label[models], col = cols[models], lwd = 2, pch
        bty = "n", cex = 0.75)
 dev.off()
 
-## Figure 2: bear recall by model and horizon, at both thresholds ##
-png("figures/bear_recall.png", width = 2000, height = 850, res = 170)
-par(mfrow = c(1, 2), mar = c(4.5, 4.5, 3, 1))
-for (thr in c("0.5", "ybar")) {
-  dt <- summ[summ$threshold == thr, ]
-  mat <- sapply(horizons, function(hh) { dh <- dt[dt$h == hh, ]; dh$recall[match(models, dh$model)] })
-  colnames(mat) <- paste0("h = ", horizons)
-  barplot(mat, beside = TRUE, col = cols[models], ylim = c(0, 1), ylab = "Bear recall",
-          main = paste("Threshold:", ifelse(thr == "0.5", "0.5", "share of bears in training window")))
+## Figure 2: bear recall by model and horizon, at both thresholds, with false alarms ##
+c05 <- "#1F5A99"; cr <- "#D1581F"; ink <- "grey25"
+png("figures/bear_recall.png", width = 2400, height = 1000, res = 200)
+layout(matrix(c(1, 2, 3, 4, 4, 4), 2, byrow = TRUE), widths = c(1.42, 1, 1), heights = c(1, 0.11))
+y <- rev(seq_along(models))
+for (k in 1:3) {
+  hh <- horizons[k]
+  a <- summ[summ$h == hh & summ$threshold == "0.5", ]
+  b <- summ[summ$h == hh & summ$threshold == "ybar", ]
+  a <- a[match(models, a$model), ]
+  b <- b[match(models, b$model), ]
+  par(mar = c(3.6, if (k == 1) 7.6 else 0.6, 2.4, 3.6), mgp = c(2.2, 0.6, 0),
+      col.axis = ink, col.lab = ink, tcl = -0.25)
+  plot(NA, xlim = c(0, 1), ylim = c(0.5, length(models) + 0.5), yaxt = "n", xaxt = "n",
+       bty = "n", xlab = "Bear recall", ylab = "", yaxs = "i")
+  title(paste0("h = ", hh), adj = 0, font.main = 2, cex.main = 1.15, col.main = ink, line = 0.9)
+  abline(v = seq(0, 1, 0.25), col = "grey90", lwd = 1)
+  abline(h = c(2.5, 7.5), col = "grey75", lwd = 1) # separates benchmarks, ML models and ensembles
+  axis(1, at = seq(0, 1, 0.25), labels = c("0", "0.25", "0.5", "0.75", "1"),
+       lwd = 0, lwd.ticks = 0.6, col.ticks = "grey60", cex.axis = 0.9)
+  if (k == 1) axis(2, at = y, labels = model_label[models], las = 1, lwd = 0, cex.axis = 0.95)
+  segments(a$recall, y, b$recall, y, col = "grey60", lwd = 2)
+  points(b$recall, y, pch = 24, bg = cr, col = "white", cex = 1.7, lwd = 0.8)
+  points(a$recall, y, pch = 21, bg = c05, col = "white", cex = 1.7, lwd = 0.8)
+  axis(4, at = y, labels = paste0(a$FP, ifelse(a$FP == b$FP, "", paste0(" \u2192 ", b$FP))),
+       las = 1, lwd = 0, cex.axis = 0.72, col.axis = "grey35", line = -0.9, hadj = 0)
+  mtext("False alarms", side = 3, at = 1.04, adj = 0, line = 0.1, cex = 0.5, col = "grey35")
 }
-legend("topright", legend = model_label[models], fill = cols[models], bty = "n", cex = 0.7)
+par(mar = c(0, 0, 0, 0))
+plot.new()
+legend("center", horiz = TRUE, bty = "n", pch = c(21, 24), pt.bg = c(c05, cr), col = "white",
+       pt.cex = 1.6, cex = 1, text.col = ink,
+       legend = c("0.5 cutoff", "Rolling cutoff (share of bears in training window)"))
 dev.off()
+
 
 ## Figure 3: ROC curves, one panel per horizon ##
 png("figures/roc_curves.png", width = 2400, height = 850, res = 170)
