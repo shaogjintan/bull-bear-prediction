@@ -4,7 +4,7 @@
 #boosting enters with its depth 2 forecast, so it has one vote like the other methods
 
 window <- 300
-members <- c("rlasso", "rf", "bagging", "boost_d2")
+members <- c("lasso", "rf", "bagging", "boost_d2")
 
 for (h in c(1, 3, 6)){
   preds <- lapply(members, function(m) read.csv(sprintf("results/%s_h%d_w%d.csv", m, h, window)))
