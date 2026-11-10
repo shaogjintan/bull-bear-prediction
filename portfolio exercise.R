@@ -5,7 +5,7 @@ panel <- read.csv("data/panel.csv")
 
 files <- c("results/bagging_h1_w300.csv", "results/boost_d2_h1_w300.csv", "results/boost_d5_h1_w300.csv",
            "results/ensemble_avg_h1_w300.csv", "results/ensemble_vote_h1_w300.csv", "results/logit_h1_w300.csv",
-           "results/persistence_h1.csv", "results/rf_h1_w300.csv", "results/rlasso_h1_w300.csv")
+           "results/persistence_h1.csv", "results/rf_h1_w300.csv", "results/lasso_h1_w300.csv")
 
 comparison <- data.frame()
 
@@ -46,7 +46,7 @@ evaluate <- function(s, rf) {
 }
 
 #Buy-and-Hold benchmark
-bh <- portfolio[portfolio$date >= as.Date("2001-07-01") & portfolio$date <= as.Date("2025-12-01"), ]
+bh <- portfolio[portfolio$date >= as.Date("2001-06-01") & portfolio$date <= as.Date("2025-12-01"), ]
 comparison <- rbind(Buy_Hold = evaluate(bh$spy_ret, bh$rf))
 
 for (f in files){
@@ -89,5 +89,7 @@ comparison[, "CAGR"] <- comparison[, "CAGR"] * 100
 comparison[, "Max_Drawdown"] <- comparison[, "Max_Drawdown"] * 100
 
 print(round(comparison, 2))
+
+write.csv(round(comparison, 2), "tables/portfolio_results.csv", row.names = TRUE)
 
 
