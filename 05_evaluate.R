@@ -57,7 +57,7 @@ for (f in files){
 }
 
 #order: benchmarks first, then the ML models
-model_order <- c("persistence", "logit", "rlasso", "rf", "bagging", "boost_d2", "boost_d5",
+model_order <- c("persistence", "logit", "lasso", "rf", "bagging", "boost_d2", "boost_d5",
                  "ensemble_avg", "ensemble_vote")
 out <- out |>
   mutate(model = factor(model, levels = union(model_order, unique(model)))) |>
@@ -82,11 +82,11 @@ dir.create("figures", showWarnings = FALSE)
 
 summ <- out |> mutate(model = as.character(model)) # the summary table built above
 
-model_label <- c(persistence = "Persistence", logit = "Logit (Nyberg)", rlasso = "rlassologit",
+model_label <- c(persistence = "Persistence", logit = "Logit (Nyberg)", lasso = "LASSO logit (BIC)",
                  rf = "Random forest", bagging = "Bagging", boost_d2 = "Boosting (d=2)",
                  boost_d5 = "Boosting (d=5)", ensemble_avg = "Average of models",
                  ensemble_vote = "Majority vote")
-cols <- c(persistence = "grey50", logit = "black", rlasso = "#1b9e77", rf = "#d95f02",
+cols <- c(persistence = "grey50", logit = "black", lasso = "#1b9e77", rf = "#d95f02",
           bagging = "#7570b3", boost_d2 = "#e7298a", boost_d5 = "#66a61e",
           ensemble_avg = "#a6761d", ensemble_vote = "#666666")
 models   <- intersect(model_order, unique(summ$model)) # models that actually have results

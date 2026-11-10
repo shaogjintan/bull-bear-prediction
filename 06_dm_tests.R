@@ -22,7 +22,7 @@ for (f in files){
 }
 preds$loss <- (preds$prob - preds$actual)^2
 
-model_order <- c("persistence", "logit", "rlasso", "rf", "bagging", "boost_d2", "boost_d5",
+model_order <- c("persistence", "logit", "lasso", "rf", "bagging", "boost_d2", "boost_d5",
                  "ensemble_avg", "ensemble_vote")
 models <- intersect(model_order, unique(preds$model))
 
@@ -61,11 +61,11 @@ write.csv(out, sprintf("results/dm_tests_w%d.csv", window), row.names = FALSE)
 dir.create("figures", showWarnings = FALSE)
 dq <- if ("loss" %in% names(out)) out[out$loss == "qps", ] else out
 lossvar <- if ("qps" %in% names(preds)) "qps" else "loss"
-model_label <- c(persistence = "Persistence", logit = "Logit", rlasso = "rlassologit",
+model_label <- c(persistence = "Persistence", logit = "Logit", lasso = "LASSO logit (BIC)",
                  rf = "Random forest", bagging = "Bagging", boost_d2 = "Boosting d=2",
                  boost_d5 = "Boosting d=5", ensemble_avg = "Average of models",
                  ensemble_vote = "Majority vote")
-cols <- c(rlasso = "#1b9e77", rf = "#d95f02", bagging = "#7570b3",
+cols <- c(lasso = "#1b9e77", rf = "#d95f02", bagging = "#7570b3",
           boost_d2 = "#e7298a", boost_d5 = "#66a61e")
 
 ## Plot 1: DM t-statistics, one panel per horizon ##
