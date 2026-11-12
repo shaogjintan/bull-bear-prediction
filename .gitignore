@@ -1,0 +1,10 @@
+# R session files
+.RData
+.Rhistory
+.Rproj.user/
+
+# papers (copyrighted)
+*.pdf
+
+# Office lock files
+~$*
