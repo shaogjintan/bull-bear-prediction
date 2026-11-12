@@ -5,7 +5,7 @@ data = read.csv("data/panel.csv")
 dir.create("results", showWarnings = FALSE)
 set.seed(4308)
 
-windows = c(480, 300) #40 and 25 year rolling windows
+windows = c(300) # 25 year rolling windows
 horizons = c(1, 3, 6) #1,3,6 step-ahead forecasts
 nprev = 295 #number of out-of-sample observations (Jun 2001 - Dec 2025)
 
@@ -43,6 +43,7 @@ bagging.rolling.window=function(data,nprev,lag,rollingwindow_size){
 #run for both windows and all horizons, one file per window and horizon
 for (W in windows) {
   for (h in horizons) {
+    set.seed(4308)
     prob = bagging.rolling.window(data, nprev, h, W)
     actual = tail(data[[paste0("y_h", h)]], nprev)
     res = data.frame(date = tail(data$date, nprev), actual = actual, prob = prob)
