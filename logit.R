@@ -32,3 +32,4 @@ for (W in windows){
     write.csv(res, sprintf("results/logit_h%d_w%d.csv", h, W), row.names = FALSE)
   }
 }
+
