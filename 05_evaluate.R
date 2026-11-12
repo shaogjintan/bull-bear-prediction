@@ -5,7 +5,7 @@ library(pROC)
 #each file has date, actual and prob (bear = 1)
 #all models are tested on the same 295 months (Jun 2001 - Dec 2025)
 
-window <- 300 #main results use the 25-year rolling window (set to 480 for the robustness table, no boosting there)
+window <- 300 #main results use the 25-year rolling window
 
 panel <- read.csv("data/panel.csv")
 panel$date <- as.Date(panel$date)
