@@ -1,12 +1,11 @@
 library(dplyr)
 library(randomForest)
-# library(hdm)
 
 data = read.csv("data/panel.csv")
 dir.create("results", showWarnings = FALSE)
 set.seed(4308)
 
-windows = c(480, 300) # 40-year and 25-year rolling windows
+windows = c(300) # 25-year rolling windows
 horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 nprev = 295 # number of test months (Jun 2001 - Dec 2025)
 
@@ -43,9 +42,10 @@ rf.rolling.window=function(data,nprev,lag,rollingwindow_size){
   return(save.pred)
 }
 
-## run: 2 windows x 3 horizons, save each to results/ ##
+## run: 3 horizons, save each to results/ ##
 for (W in windows) {
   for (h in horizons) {
+    set.seed(4308)
     prob   = rf.rolling.window(data, nprev, h, W)
     actual = tail(data[[paste0("y_h", h)]], nprev)
     res    = data.frame(date = tail(data$date, nprev), actual = actual, prob = prob)
@@ -68,20 +68,3 @@ for (f in list.files("results", pattern = "^rf_h.*\\.csv$", full.names = TRUE)) 
               sum(pred == 1 & d$actual == 1), sum(d$actual == 1),
               sum(pred == 1 & d$actual == 0)))
 }
-
-# rf1 = rf.rolling.window(data, 295, 1)
-# rf1_pred = factor(as.numeric(rf1 > 0.5), levels=c(0,1))
-# actual1 = factor(tail(data$y_h1, 295), levels=c(0,1))
-# 
-# rf3 = rf.rolling.window(data, 295, 3)
-# rf3_pred = factor(as.numeric(rf3 > 0.5), levels=c(0,1))
-# actual3 = factor(tail(data$y_h3, 295), levels=c(0,1))
-# 
-# rf6 = rf.rolling.window(data, 295, 6)
-# rf6_pred = factor(as.numeric(rf6 > 0.5), levels=c(0,1))
-# actual6 = factor(tail(data$y_h6, 295), levels=c(0,1))
-# 
-# cm_rf1 = confusionMatrix(rf1_pred,actual1)
-# cm_rf3 = confusionMatrix(rf3_pred,actual3)
-# cm_rf6 = confusionMatrix(rf6_pred,actual6)
-

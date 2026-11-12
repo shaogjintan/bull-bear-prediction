@@ -9,7 +9,7 @@ data$ddp_l2 <- c(rep(NA, 2), head(data$ddp, -2))
 #We wish to predict the 1, 3, 6-step ahead forecast
 forecast_horizons <- c(1, 3, 6)
 
-windows <- c(480, 300) #40-year and 25-year rolling windows, same as the ML models
+windows <- c(300) #25-year rolling windows, same as the ML models
 testrows <- which(data$date >= as.Date("2001-06-01"))
 
 for (W in windows){
@@ -32,3 +32,4 @@ for (W in windows){
     write.csv(res, sprintf("results/logit_h%d_w%d.csv", h, W), row.names = FALSE)
   }
 }
+

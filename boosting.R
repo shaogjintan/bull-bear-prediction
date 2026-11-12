@@ -13,7 +13,6 @@ params <- list(
   objective = "binary:logistic"
 )
 
-# rollingwindow_size = 480 # Number of observations used in rolling window
 rollingwindow_size = 300 # 25-year rolling window (40 years leaves no room for validation before 2001)
 horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 
@@ -122,34 +121,3 @@ for (f in list.files("results", pattern = "^boost_d.*\\.csv$", full.names = TRUE
               sum(pred == 1 & dd$actual == 1), sum(dd$actual == 1),
               sum(pred == 1 & dd$actual == 0)))
 }
-
-# # Evaluation on the test set (2010-01 onwards) based on the chosen hyperparameters
-# # h=1: nrounds=50, tree depth = 2
-# set.seed(4308)
-# boosting1_d2 = boosting.rolling.window(data, nprev_test, 1, nrow(data), parameters(2), 50)
-# boosting1_d2_pred = factor(as.numeric(boosting1_d2 > 0.5), levels=c(0,1))
-# # h=3: nrounds=250, tree depth = 5
-# set.seed(4308)
-# boosting3_d5 = boosting.rolling.window(data, nprev_test, 3, nrow(data), parameters(5), 250)
-# boosting3_d5_pred = factor(as.numeric(boosting3_d5 > 0.5), levels=c(0,1))
-# 
-# # h=6: nrounds=25, tree depth = 2
-# set.seed(4308)
-# boosting6_d2 = boosting.rolling.window(data, nprev_test, 6, nrow(data), parameters(2), 25)
-# boosting6_d2_pred = factor(as.numeric(boosting6_d2 > 0.5), levels=c(0,1))
-# 
-
-# actual1 = factor(tail(data$y_h1, nprev_test), levels=c(0,1))
-# actual3 = factor(tail(data$y_h3, nprev_test), levels=c(0,1))
-# actual6 = factor(tail(data$y_h6, nprev_test), levels=c(0,1))
-# 
-# # Evaluation metrics
-# cm_boosting1_d2 = confusionMatrix(boosting1_d2_pred, actual1, positive = "1", mode = "everything")
-# cm_boosting6_d2 = confusionMatrix(boosting6_d2_pred, actual6, positive = "1", mode = "everything")
-# cm_boosting3_d5 = confusionMatrix(boosting3_d5_pred, actual3, positive = "1", mode = "everything")
-# 
-# roc1_d2 = roc(response = actual1, predictor = as.numeric(boosting1_d2), levels = c(0, 1), direction = "<")
-# roc6_d2 = roc(response = actual6, predictor = as.numeric(boosting6_d2), levels = c(0, 1), direction = "<")
-# roc3_d5 = roc(response = actual3, predictor = as.numeric(boosting3_d5), levels = c(0, 1), direction = "<")
-# 
-# auc(roc1_d2); auc(roc6_d2); auc(roc3_d5)
