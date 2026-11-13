@@ -22,12 +22,18 @@ runbagging=function(y, X,lag){
   X_test = X[nrow(X),,drop = FALSE] #Regressors that are used for the forecast
   model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = ncol(X_train))
   pred=predict(model,newdata=X_test,type="prob")[, "1"] #Generate the forecast
-  return(list("model"=model,"pred"=pred)) #Return the estimated model and h-step forecast
+
+  imp= importance(model)[, "MeanDecreaseGini"]
+  imp= tapply(imp, sub("_l[0-9]+$", "", names(imp)), sum)   # Compute feature importance by summing importance of all lags
+  imp = imp / sum(imp)                                        # shares that add to 1
+
+  return(list("model"=model,"pred"=pred, "imp"=imp)) #Return the estimated model and h-step forecast
 }
 
 
 bagging.rolling.window=function(data,nprev,lag,rollingwindow_size){
   save.pred = numeric(nprev)
+  save.imp = vector("list", nprev)              
   X = X_all
   y = data[[paste0("y_h", lag)]] 
   for(i in nprev:1){
@@ -35,18 +41,32 @@ bagging.rolling.window=function(data,nprev,lag,rollingwindow_size){
     X.window=X[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1),]
     bag=runbagging(y.window,X.window,lag) #Fit bagging and predict
     save.pred[(1+nprev-i)]=bag$pred #Save the forecast
+    save.imp[[1+nprev-i]] = bag$imp # Save feature importance
     cat("iteration",(1+nprev-i),"\n") #display iteration number
   }
-  return(save.pred)
+  return(list(pred = save.pred, imp = do.call(rbind, save.imp)))
 }
 
 #run for both windows and all horizons, one file per window and horizon
+imp_all = data.frame() 
+
 for (W in windows) {
   for (h in horizons) {
     set.seed(4308)
-    prob = bagging.rolling.window(data, nprev, h, W)
+    out = bagging.rolling.window(data, nprev, h, W)
+    prob = out$pred
     actual = tail(data[[paste0("y_h", h)]], nprev)
     res = data.frame(date = tail(data$date, nprev), actual = actual, prob = prob)
     write.csv(res, sprintf("results/bagging_h%d_w%d.csv", h, W), row.names = FALSE)
+    m = colMeans(out$imp) # Calculate average importance share of each variable across all rolling windows
+    imp_all = rbind(imp_all, data.frame(h = h, model = "bagging", variable = names(m), mean_share = as.numeric(m), windows = nrow(out$imp))) 
+
   }
 }
+
+top_features = imp_all |>
+  group_by(h) |>
+  slice_max(mean_share, n = 10, with_ties = FALSE) |>
+  ungroup()
+
+write.csv(top_features, sprintf("tables/importance_bagging_top10_w%d.csv", windows[1]), row.names = FALSE)

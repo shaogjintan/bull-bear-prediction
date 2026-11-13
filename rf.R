@@ -22,14 +22,22 @@ runrf=function(y, X,lag){
   X_train= X[1:(nrow(X)-lag),] #drop the last h rows such that they are not used to train the model (to prevent leakage)
   y_train = factor(y[1:(nrow(X)-lag)], levels=c(0,1))
   X_test = X[nrow(X),,drop = FALSE] # Regressors that are used for the forecast
-  model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = floor(sqrt(ncol(X_train))))  
+  model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = floor(sqrt(ncol(X_train)))) 
+
+  imp= importance(model)[, "MeanDecreaseGini"]
+  imp= tapply(imp, sub("_l[0-9]+$", "", names(imp)), sum)   # Compute feature importance by summing importance of all lags
+  imp = imp / sum(imp)                                        # shares that add to 1
+
   pred=predict(model,newdata=X_test,type="prob")[, "1"] # Generate the forecast
-  return(list("model"=model,"pred"=pred)) # Return the estimated model and h-step forecast
+  return(list("model"=model,"pred"=pred, "imp"=imp)) # Return the estimated model and h-step forecast
+
+
 }
 
 
 rf.rolling.window=function(data,nprev,lag,rollingwindow_size){
   save.pred = numeric(nprev)
+  save.imp = vector("list", nprev)              
   X = X_all # regressors built at the top
   y = data[[paste0("y_h", lag)]] # Vector of target variable (y_h1, y_h3, y_h6) to be forecasted
   for(i in nprev:1){ 
@@ -37,21 +45,33 @@ rf.rolling.window=function(data,nprev,lag,rollingwindow_size){
     X.window=X[(nrow(X)-i+1-(rollingwindow_size+lag-1)):(nrow(X)-i+1),] 
     rf=runrf(y.window,X.window,lag) #  Fit random forest and predict
     save.pred[(1+nprev-i)]=rf$pred # Save the forecast
+    save.imp[[1+nprev-i]] = rf$imp # Save feature importance
     cat("iteration",(1+nprev-i),"\n") #display iteration number
   }
-  return(save.pred)
+  return(list(pred = save.pred, imp = do.call(rbind, save.imp)))
 }
 
 ## run: 3 horizons, save each to results/ ##
+imp_all = data.frame() 
 for (W in windows) {
   for (h in horizons) {
     set.seed(4308)
-    prob   = rf.rolling.window(data, nprev, h, W)
+    out = rf.rolling.window(data, nprev, h, W)
+    prob   = out$pred
     actual = tail(data[[paste0("y_h", h)]], nprev)
     res    = data.frame(date = tail(data$date, nprev), actual = actual, prob = prob)
     write.csv(res, sprintf("results/rf_h%d_w%d.csv", h, W), row.names = FALSE)
+    m = colMeans(out$imp) # Calculate average importance share of each variable across all rolling windows
+    imp_all = rbind(imp_all, data.frame(h = h, model = "rf", variable = names(m), mean_share = as.numeric(m), windows = nrow(out$imp))) 
   }
 }
+
+top_features = imp_all |>
+  group_by(h) |>
+  slice_max(mean_share, n = 10, with_ties = FALSE) |>
+  ungroup()
+
+write.csv(top_features, sprintf("tables/importance_rf_top10_w%d.csv", windows[1]), row.names = FALSE)
 
 ## checks ##
 auc_fn <- function(prob, actual) {
