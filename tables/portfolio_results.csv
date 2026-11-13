@@ -1,13 +1,13 @@
 "","Annual_Return","Sharpe","Final_Wealth","CAGR","Max_Drawdown"
-"Buy_Hold",9.84,0.55,84825.03,9.09,-50.78
+"Buy_Hold",9.98,0.56,86895.7,9.23,-50.78
 "bagging_h1_w300.csv_Threshold_0.5",9.76,0.68,91316.87,9.45,-23.41
-"bagging_h1_w300.csv_Threshold_rolling",8.46,0.59,67349.02,8.1,-23.48
+"bagging_h1_w300.csv_Threshold_rolling",8.36,0.58,65663.76,7.98,-24.34
 "boost_d2_h1_w300.csv_Threshold_0.5",9.72,0.68,90507.98,9.41,-22.59
 "boost_d2_h1_w300.csv_Threshold_rolling",9.83,0.71,93716.42,9.56,-21.32
 "boost_d5_h1_w300.csv_Threshold_0.5",9.8,0.69,92362.01,9.5,-22.59
 "boost_d5_h1_w300.csv_Threshold_rolling",9.68,0.7,90391.5,9.4,-21.32
 "ensemble_avg_h1_w300.csv_Threshold_0.5",9.76,0.68,91316.87,9.45,-23.41
-"ensemble_avg_h1_w300.csv_Threshold_rolling",9.4,0.67,84528.26,9.1,-24.34
+"ensemble_avg_h1_w300.csv_Threshold_rolling",9.63,0.69,89361.44,9.35,-23.48
 "ensemble_vote_h1_w300.csv_Threshold_0.5",9.76,0.68,91316.87,9.45,-23.41
 "ensemble_vote_h1_w300.csv_Threshold_rolling",9.76,0.68,91316.87,9.45,-23.41
 "logit_h1_w300.csv_Threshold_0.5",9.76,0.68,91316.87,9.45,-23.41
@@ -15,6 +15,6 @@
 "persistence_h1.csv_Threshold_0.5",9.76,0.68,91316.87,9.45,-23.41
 "persistence_h1.csv_Threshold_rolling",9.76,0.68,91316.87,9.45,-23.41
 "rf_h1_w300.csv_Threshold_0.5",10.52,0.73,108834.4,10.23,-23.41
-"rf_h1_w300.csv_Threshold_rolling",8.41,0.61,67283.75,8.09,-21.88
+"rf_h1_w300.csv_Threshold_rolling",7.97,0.57,60430.7,7.62,-21.88
 "lasso_h1_w300.csv_Threshold_0.5",9.83,0.69,92891.86,9.52,-23.41
 "lasso_h1_w300.csv_Threshold_rolling",9.76,0.68,91316.87,9.45,-23.41

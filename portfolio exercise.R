@@ -46,7 +46,7 @@ evaluate <- function(s, rf) {
 }
 
 #Buy-and-Hold benchmark
-bh <- portfolio[portfolio$date >= as.Date("2001-06-01") & portfolio$date <= as.Date("2025-12-01"), ]
+bh <- portfolio[portfolio$date >= as.Date("2001-07-01") & portfolio$date <= as.Date("2025-12-01"), ]
 comparison <- rbind(Buy_Hold = evaluate(bh$spy_ret, bh$rf))
 
 for (f in files){
