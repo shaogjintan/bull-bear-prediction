@@ -59,11 +59,18 @@ runboosting=function(y, X,lag,params,nrounds){
   for (i in 1:length(nrounds)) {
     predicted[i] = predict(model, X_test, iterationrange = c(1, nrounds[i] + shift)) # forecast using the first nrounds[i] trees
   }
-  return(list("model"= model,"pred"= predicted)) # Return the estimated model and h-step forecast
+  gain = xgb.importance(model = model)     
+  base = sub("_l[0-9]+$", "", colnames(X))                          
+  imp = tapply(gain$Gain, factor(sub("_l[0-9]+$", "", gain$Feature), levels = unique(base)),
+               sum, default = 0)                         
+  imp = imp / sum(imp)                                                
+
+  return(list("model"= model,"pred"= predicted, "imp"= imp)) # Return the estimated model and h-step forecast
 }
 
 boosting.rolling.window=function(data,nprev,lag,end_row,params,nrounds){
   save.pred = matrix(NA,nprev,length(nrounds))
+  save.imp = vector("list", nprev)
   X = X_all # regressors built at the top (includes state and its lags)
   y = data[[paste0("y_h", lag)]] # Vector of target variable (y_h1, y_h3, y_h6) to be forecasted
   for(i in nprev:1){
@@ -71,9 +78,10 @@ boosting.rolling.window=function(data,nprev,lag,end_row,params,nrounds){
     X.window=X[(end_row-i+1-(rollingwindow_size+lag-1)):(end_row-i+1),]
     boost=runboosting(y.window,X.window,lag,params,nrounds) #  Fit boosting and predict
     save.pred[(1+nprev-i),]=boost$pred # Save the forecast
+    save.imp[[1+nprev-i]] = boost$imp 
     cat("iteration",(1+nprev-i),"\n") # display iteration number
   }
-  return(save.pred)
+  return(list(pred = save.pred, imp = do.call(rbind, save.imp)))
 }
 
 ## 1. tune the number of trees on the validation window, using AUC, for each horizon and depth ##
@@ -82,7 +90,7 @@ tune.boosting=function(lag,d){
   val_end = test_start_row - lag # last validation origin: its target (state at test start) is known at the first test origin
   nprev_val = val_end - val_start_row + 1
   actual_val = y[val_start_row:val_end]
-  p = boosting.rolling.window(data, nprev_val, lag, val_end, parameters(d), nrounds_grid)
+  p = boosting.rolling.window(data, nprev_val, lag, val_end, parameters(d), nrounds_grid)$pred
   auc = apply(p, 2, function(s) as.numeric(auc(roc(response = actual_val, predictor = s,
                                                    levels = c(0, 1), direction = "<", quiet = TRUE))))
   return(data.frame(lag = lag, depth = d, nrounds = nrounds_grid, val_auc = auc))
@@ -102,13 +110,27 @@ best = tuning |> group_by(lag, depth) |> slice_max(val_auc, n = 1, with_ties = F
 print(best)
 
 # 2. test set (Jun 2001 - Dec 2025) with the chosen number of trees, both depths ##
+imp_all = data.frame()
 for(k in 1:nrow(best)){
   h = best$lag[k]; d = best$depth[k]; M = best$nrounds[k]
-  prob = boosting.rolling.window(data, nprev_test, h, nrow(data), parameters(d), M)[, 1]
+  out = boosting.rolling.window(data, nprev_test, h, nrow(data), parameters(d), M)
+  prob = out$pred[,1]
   actual = tail(data[[paste0("y_h", h)]], nprev_test)
   res = data.frame(date = tail(data$date, nprev_test), actual = actual, prob = prob)
   write.csv(res, sprintf("results/boost_d%d_h%d_w%d.csv", d, h, rollingwindow_size), row.names = FALSE)
+
+  m = colMeans(out$imp) 
+  imp_all = rbind(imp_all, data.frame(h = h, model = paste0("boosting_d", d), variable = names(m),
+                                      mean_share = as.numeric(m)))
 }
+
+top_features = imp_all |>
+  group_by(h, model) |>
+  slice_max(mean_share, n = 10, with_ties = FALSE) |>
+  ungroup()
+top_features$mean_share = round(100 * top_features$mean_share, 1)
+write.csv(top_features, sprintf("tables/importance_boosting_top10_w%d.csv", rollingwindow_size), row.names = FALSE)
+print(as.data.frame(top_features))
 
 # checks ##
 for (f in list.files("results", pattern = "^boost_d.*\\.csv$", full.names = TRUE)) {
