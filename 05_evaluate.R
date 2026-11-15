@@ -14,6 +14,7 @@ panel$date <- as.Date(panel$date)
 files <- c(list.files("results", pattern = paste0("_h[136]_w", window, "\\.csv$"), full.names = TRUE),
            list.files("results", pattern = "^persistence_h[136]\\.csv$", full.names = TRUE))
 
+# classification metrics at given cutoff
 metrics <- function(actual, prob, threshold){
   forecast <- as.numeric(prob >= threshold)
   confusion.matrix <- table(factor(actual, levels = c(0, 1)), factor(forecast, levels = c(0, 1)))
@@ -29,23 +30,23 @@ metrics <- function(actual, prob, threshold){
              F1 = if (!is.na(precision) && precision + recall > 0) 2*precision*recall/(precision + recall) else NA,
              TP = TP, FP = FP, FN = FN, TN = TN)
 }
-
+# AUC, QPS and classification metrics for each model & horizon
 out <- data.frame()
 for (f in files){
   name <- sub("\\.csv$", "", basename(f))
-  model <- sub("_h[136](_w[0-9]+)?$", "", name)              #e.g. "boost_d2", "rf", "persistence"
+  model <- sub("_h[136](_w[0-9]+)?$", "", name)
   h <- as.numeric(sub(".*_h([136])(_w[0-9]+)?$", "\\1", name))
   res <- read.csv(f)
   res$date <- as.Date(res$date)
   
-  #share of bears in the training window, used as a second cutoff (Nyberg's ybar)
+  #share of bears in the training window, used as a second cutoff (rolling version of Nyberg's sample-average cutoff)
   y <- paste0("y_h", h)
   i <- match(res$date, panel$date)
   ybar <- sapply(i, function(k) mean(panel[[y]][max(1, k-h-window+1):(k-h)]))
   
   roc_h <- roc(response = res$actual, predictor = res$prob, levels = c(0, 1), direction = "<", quiet = TRUE)
   auc_h <- as.numeric(auc(roc_h))
-  qps <- 2*mean((res$prob - res$actual)^2) #Nyberg's quadratic probability score (lower is better)
+  qps <- 2*mean((res$prob - res$actual)^2) #Nyberg's QPS
   
   for (threshold in c("0.5", "ybar")){
     cutoff <- if (threshold == "0.5") 0.5 else ybar
@@ -113,12 +114,12 @@ wide <- function(df, vars) {
 ## TABLES         ##
 ####################
 
-## Table 1: probability accuracy (no threshold needed): AUC (higher = better), QPS (lower = better) ##
+## Report Table 7: AUC and QPS ##
 tab_prob <- wide(summ[summ$threshold == "0.5", ], c("AUC", "QPS"))
 print(tab_prob, row.names = FALSE)
 write.csv(tab_prob, "tables/results_auc_qps.csv", row.names = FALSE)
 
-## Tables 2-3: classification metrics at each threshold ##
+## Report Tables 8: classification metrics, panel A (0.5), panel B (rolling threshold) ##
 for (thr in c("0.5", "ybar")) {
   tab <- wide(summ[summ$threshold == thr, ], c("accuracy", "precision", "recall", "F1"))
   cat("\nThreshold:", thr, "\n"); print(tab, row.names = FALSE)
@@ -130,7 +131,7 @@ for (thr in c("0.5", "ybar")) {
 ## FIGURES        ##
 ####################
 
-## Figure 1: AUC and QPS by horizon ##
+## Report Figure 2: AUC and QPS by horizon ##
 png("figures/auc_qps_by_horizon.png", width = 2000, height = 850, res = 170)
 par(mfrow = c(1, 2), mar = c(4.5, 4.5, 3, 1))
 d <- summ[summ$threshold == "0.5", ]
@@ -149,7 +150,7 @@ legend("topleft", legend = model_label[models], col = cols[models], lwd = 2, pch
        bty = "n", cex = 0.75)
 dev.off()
 
-## Figure 2: bear recall by model and horizon, at both thresholds, with false alarms ##
+## Report Figure 3: bear recall by model and horizon, at both thresholds, with false alarms ##
 c05 <- "#1F5A99"; cr <- "#D1581F"; ink <- "grey25"
 png("figures/bear_recall.png", width = 2400, height = 1000, res = 200)
 layout(matrix(c(1, 2, 3, 4, 4, 4), 2, byrow = TRUE), widths = c(1.42, 1, 1), heights = c(1, 0.11))
@@ -185,7 +186,7 @@ legend("center", horiz = TRUE, bty = "n", pch = c(21, 24), pt.bg = c(c05, cr), c
 dev.off()
 
 
-## Figure 3: ROC curves, one panel per horizon ##
+## ROC curves, one panel per horizon (not in report) ##
 png("figures/roc_curves.png", width = 2400, height = 850, res = 170)
 par(mfrow = c(1, 3), mar = c(4.5, 4.5, 3, 1))
 for (hh in horizons) {
@@ -201,8 +202,8 @@ for (hh in horizons) {
 legend("bottomright", legend = model_label[models], col = cols[models], lwd = 2, bty = "n", cex = 0.7)
 dev.off()
 
-## Figures 4a-c: predicted bear probability over the test period, one figure per horizon ##
-# x-axis = forecast origin t; shaded = months where the target (state at t+h) is bear
+## Report Figure 4 (h=3 only): predicted bear probability over the test period ##
+# shaded = months where the target (state at t+h) is bear
 shade <- function(dates, a) {
   r <- rle(a); e <- cumsum(r$lengths); s <- e - r$lengths + 1
   for (k in which(r$values == 1))

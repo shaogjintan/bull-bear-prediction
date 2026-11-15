@@ -122,7 +122,7 @@ sp_vol <- sp |>
 sp_feat <- sp_df |>
   arrange(date) |>
   mutate(ret_m = log(sp500) - lag(log(sp500)), # monthly return
-         dtoy  = log(sp500) - log(zoo::rollmax(sp500, 12, fill = NA, align = "right")), # distance from 12-month high
+         dtoy = log(sp500) - log(zoo::rollmax(sp500, 12, fill = NA, align = "right")), # distance from 12-month high
          dtoat = log(sp500) - log(cummax(sp500))) |> # distance from all-time high
   select(date, ret_m, dtoy, dtoat)
 
@@ -135,9 +135,9 @@ sp_feat <- sp_df |>
 
 dat <- sp_df |>
   select(date, sp500) |>
-  inner_join(fred_t,    by = "date") |>
+  inner_join(fred_t, by = "date") |>
   inner_join(fred_feat, by = "date") |>
-  inner_join(sp_vol,    by = "date") |>
-  inner_join(sp_feat,   by = "date") |>
-  inner_join(g,         by = "date")
+  inner_join(sp_vol, by = "date") |>
+  inner_join(sp_feat, by = "date") |>
+  inner_join(g, by = "date")
 

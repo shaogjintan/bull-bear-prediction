@@ -55,18 +55,18 @@ for (t in 2:n) {
 
 ## delay d: months from the turning point to the month it is signalled ##
 turns <- turns |>
-  mutate(turn_date   = sp_df$date[turn],
+  mutate(turn_date = sp_df$date[turn],
          signal_date = sp_df$date[signal],
-         d           = signal - turn)
+         d = signal - turn)
 print(select(turns, type, turn_date, signal_date, d))
 cat("d (months): mean", mean(turns$d), ", max", max(turns$d), "\n")
 
 ## targets: state h months ahead, NA for the last h months ##
 target <- sp_df |>
   mutate(state = state,
-         y_h1  = lead(state, 1),
-         y_h3  = lead(state, 3),
-         y_h6  = lead(state, 6))
+         y_h1 = lead(state, 1),
+         y_h3 = lead(state, 3),
+         y_h6 = lead(state, 6))
 
 # checking
 print(mean(target$state)) # share of bear months
