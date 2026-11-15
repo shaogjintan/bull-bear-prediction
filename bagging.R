@@ -52,7 +52,7 @@ bagging.rolling.window=function(data,nprev,lag,rollingwindow_size){
   return(list(pred = save.pred, imp = do.call(rbind, save.imp)))
 }
 
-#run for both windows and all horizons, one file per window and horizon
+#run for all horizons
 imp_all = data.frame() 
 
 for (W in windows) {

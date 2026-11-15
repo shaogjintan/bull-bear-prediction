@@ -1,6 +1,6 @@
 # rf.R: random forest, 500 trees, mtry = sqrt(853) = 29, 25-year rolling window
 # Direct forecasts of the bear state at h = 1, 3, 6 for the 295 test origins (Jun 2001 - Dec 2025),
-# plus Gini feature importance in every window (report Table 11)
+# Gini feature importance in every window (report Table 11)
 # Input: data/panel.csv
 # Output: results/rf_h<h>_w300.csv, tables/importance_rf_top10_w300.csv
 
@@ -15,17 +15,15 @@ windows = c(300) # 25-year rolling windows
 horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 nprev = 295 # number of test months (Jun 2001 - Dec 2025)
 
-# Unlike rlasso, RF keeps state and its lags, because trees can use them
 keep_lag0 = c("ret_m", "dtoy", "dtoat", "svar", "tms", "dfy", "state") # lag-0 columns known at month end
 lag0_cols = names(data)[!grepl("_l[0-9]+$", names(data))] # columns without an _l1.._l6 suffix
 dropped_columns = unique(c("date", "sp500", "y_h1", "y_h3", "y_h6",
                            setdiff(lag0_cols, keep_lag0))) # lag-0 macro/Goyal: not released yet at t
 X_all = as.matrix(select(data, -all_of(dropped_columns)))
 
-# the window has W + h rows: train on the first W (their targets are known at the origin),
-# then predict the last row (the origin)
+
 runrf=function(y, X,lag){
-  X_train= X[1:(nrow(X)-lag),] #drop the last h rows such that they are not used to train the model (to prevent leakage)
+  X_train= X[1:(nrow(X)-lag),] #drop the last h rows such that they are not used to train the model 
   y_train = factor(y[1:(nrow(X)-lag)], levels=c(0,1))
   X_test = X[nrow(X),,drop = FALSE] # Regressors that are used for the forecast
   model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = floor(sqrt(ncol(X_train)))) 

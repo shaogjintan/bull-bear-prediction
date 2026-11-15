@@ -1,17 +1,13 @@
 # lasso.R: LASSO logit (glmnet) on the same 853 regressors as the tree models, 25-year rolling window
-# The penalty is chosen by BIC in every window, using the training rows only (as in the lecture code func-lasso.R),
-# so no validation window is needed. Also records the variables selected in each window (report Table 10)
+# The penalty is chosen by BIC in every window, using the training rows only, so no validation window is needed. 
+# Records the variables selected in each window (report Table 10)
 # Input: data/panel.csv
-# Output: results/lasso_h<h>_w300.csv, results/lasso_selected_w300_h<h>.csv, results/lasso_lambda_w300_h<h>.csv,
-#         tables/lasso_selection_frequency_w300.csv
+# Output: results/lasso_h<h>_w300.csv, results/lasso_selected_w300_h<h>.csv, results/lasso_lambda_w300_h<h>.csv, tables/lasso_selection_frequency_w300.csv
 
 library(dplyr)
 library(glmnet)
 library(pROC)
 
-# Lasso logit with the same regressors as the tree models (state and its lags included).
-# The penalty is chosen by BIC inside every rolling window, using the training rows only
-# (as in the lecture code func-lasso.R), so no validation window is needed.
 
 data = read.csv("data/panel.csv")
 data$date = as.Date(data$date)
@@ -24,11 +20,10 @@ horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 nprev_test = 295
 
 ## predictors (X) ##
-# lag-0 columns kept: market variables and the current state, known at month end
 keep_lag0 = c("ret_m", "dtoy", "dtoat", "svar", "tms", "dfy", "state")
-lag0_cols = names(data)[!grepl("_l[0-9]+$", names(data))] # columns without an _l1.._l6 suffix
+lag0_cols = names(data)[!grepl("_l[0-9]+$", names(data))] 
 dropped_columns = unique(c("date", "sp500", "y_h1", "y_h3", "y_h6",
-                           setdiff(lag0_cols, keep_lag0))) # lag-0 macro/Goyal: not released yet at t
+                           setdiff(lag0_cols, keep_lag0))) 
 X_all = as.matrix(select(data, -all_of(dropped_columns)))
 
 # count glmnet convergence warnings
@@ -38,18 +33,15 @@ countwarn = function(w){
   invokeRestart("muffleWarning")
 }
 
-# the window has W + h rows: train on the first W (their targets are known at the origin),
-# then predict the last row (the origin)
 runlasso = function(y, X, lag){
-  X_train = X[1:(nrow(X)-lag),] # drop the last h rows such that they are not used to train the model (to prevent leakage)
+  X_train = X[1:(nrow(X)-lag),] # drop the last h rows such that they are not used to train the model 
   y_train = y[1:(nrow(X)-lag)]
   keep = apply(X_train, 2, sd) > 0 # columns that are not constant in this window
   X_train = X_train[, keep, drop = FALSE]
-  X_test = X[nrow(X), keep, drop = FALSE] # forecast row, same columns as training
+  X_test = X[nrow(X), keep, drop = FALSE] # forecast row
   model = withCallingHandlers(
     glmnet(X_train, factor(y_train, levels = c(0, 1)), family = "binomial", alpha = 1),
     warning = countwarn)
-  # BIC along the lambda path: deviance (= -2 x log-likelihood) + log(n) x number of nonzero coefficients
   bic = deviance(model) + log(nrow(X_train)) * model$df
   best = which.min(bic)
   pred = as.numeric(predict(model, newx = X_test, type = "response", s = model$lambda[best]))

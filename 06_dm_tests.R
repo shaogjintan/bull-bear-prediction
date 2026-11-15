@@ -1,4 +1,4 @@
-# 06_dm_tests.R: Diebold-Mariano tests of each model against the logit and persistence benchmarks (as in lecture 4)
+# 06_dm_tests.R: Diebold-Mariano tests of each model against the logit and persistence benchmarks
 # Loss = squared error of the bear probability; d = loss(benchmark) - loss(model), so a positive t means the model is better
 # Newey-West standard errors with n^(1/3) = 7 lags; two-sided p-values
 # Input: results/<model>_h<h>_w300.csv, results/persistence_h<h>.csv (run after 07_ensemble.R)
@@ -41,7 +41,7 @@ for (h in c(1, 3, 6)){
       stopifnot(nrow(both) == nrow(base), all(both$actual_base == both$actual_model)) #same months, same outcomes
       
       d <- both$loss_base - both$loss_model
-      lag <- round(nrow(both)^(1/3)) #n^(1/3) rule from the lecture
+      lag <- round(nrow(both)^(1/3)) #n^(1/3) rule 
       if (var(d) == 0){
         tstat <- NA
       } else {
@@ -62,8 +62,8 @@ write.csv(out, sprintf("results/dm_tests_w%d.csv", window), row.names = FALSE)
 ## DM PLOTS (QPS) (not in report)  ##
 ######################
 dir.create("figures", showWarnings = FALSE)
-dq <- if ("loss" %in% names(out)) out[out$loss == "qps", ] else out
-lossvar <- if ("qps" %in% names(preds)) "qps" else "loss"
+dq <- out
+lossvar <- "loss"
 model_label <- c(persistence = "Persistence", logit = "Logit", lasso = "LASSO logit (BIC)",
                  rf = "Random forest", bagging = "Bagging", boost_d2 = "Boosting d=2",
                  boost_d5 = "Boosting d=5", ensemble_avg = "Average of models",

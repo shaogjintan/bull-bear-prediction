@@ -1,7 +1,7 @@
 # 04_combined_data.R: merges the predictors with the target and builds the modelling panel
 # Runs 02_data_processing.R, drops predictors not observed over the whole sample, adds lags 1-6 of every
 # predictor and of the state, and keeps Jul 1960 - Dec 2025 (786 months)
-# Input: data/target.csv (from 03_label_bull_bear.R), plus the inputs of 02_data_processing.R
+# Input: data/target.csv (from 03_label_bull_bear.R) and the inputs of 02_data_processing.R
 # Output: data/panel.csv
 
 library(dplyr)
@@ -63,7 +63,7 @@ make_lags <- function(df, vars, k) {
 
 lag_list <- lapply(1:n_lags, function(k) make_lags(panel, x_vars, k))
 
-# lags of the bull/bear state (for the dynamic models)
+# lags of the bull/bear state 
 state_lags <- lapply(1:n_lags, function(k) make_lags(panel, "state", k))
 
 panel_lags <- bind_cols(panel, lag_list, state_lags)

@@ -1,6 +1,5 @@
 # 03_label_bull_bear.R: dates bull/bear states with the Lunde-Timmermann filter (20% threshold) and builds the targets
-# y_h1, y_h3, y_h6 = the state 1, 3 and 6 months ahead (the bear chronology in report Table 5 is built in eda.R)
-# Input: data/sp500_daily.csv
+# y_h1, y_h3, y_h6 = the state 1, 3 and 6 months ahead
 # Output: data/target.csv
 
 library(dplyr)
@@ -8,12 +7,6 @@ library(lubridate)
 #########################
 ## BULL / BEAR LABELS  ##
 #########################
-
-# Lunde-Timmermann (2004) filter on monthly S&P 500 closes. It is one-sided:
-# the state at month t only uses prices up to t.
-# - bull: track the highest close. A fall of lambda_bear from it starts a bear.
-# - bear: track the lowest close. A rise of lambda_bull from it starts a bull.
-
 lambda_bear <- 0.20 # fall from peak that signals a bear
 lambda_bull <- 0.20 # rise from trough that signals a bull
 
@@ -31,7 +24,7 @@ sp_df <- sp |>
 price <- sp_df$sp500
 n <- length(price)
 
-## real-time state: 1 = bear, 0 = bull ##
+# real-time state: 1 = bear, 0 = bull 
 state <- integer(n)
 in_bear <- FALSE
 peak <- 1 # position of the highest close in the current bull
@@ -66,7 +59,7 @@ turns <- turns |>
 print(select(turns, type, turn_date, signal_date, d))
 cat("d (months): mean", mean(turns$d), ", max", max(turns$d), "\n")
 
-## targets: state h months ahead, NA for the last h months ##
+# targets: state h months ahead, NA for the last h months 
 target <- sp_df |>
   mutate(state = state,
          y_h1 = lead(state, 1),

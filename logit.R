@@ -32,7 +32,7 @@ for (W in windows){
       prob[k] <- predict(model, newdata = data[i,], type = "response")
     }
     
-    #save the predictions into results folder with one file per window and horizon
+    #save the predictions into results folder with one file per horizon
     res <- data.frame(date = data$date[testrows], actual = data[[y]][testrows], prob = prob)
     write.csv(res, sprintf("results/logit_h%d_w%d.csv", h, W), row.names = FALSE)
   }
