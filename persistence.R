@@ -1,4 +1,9 @@
+# persistence.R: persistence benchmark, which forecasts the current state (prob = 0 or 1); no estimation needed
+# Input: data/panel.csv
+# Output: results/persistence_h<h>.csv
+
 data <- read.csv("data/panel.csv")
+dir.create("results", showWarnings = FALSE)
 
 forecast_horizons <- c(1, 3, 6)
 

@@ -2,6 +2,8 @@
 #average: mean of the bear probabilities of the models
 #vote: bear if at least half of the models give a probability of 0.5 or more (a tie counts as a bear)
 #boosting enters with its depth 2 forecast, so it has one vote like the other methods
+# Input: results/{lasso,rf,bagging,boost_d2}_h<h>_w300.csv
+# Output: results/ensemble_avg_h<h>_w300.csv, results/ensemble_vote_h<h>_w300.csv (run before 05_evaluate.R)
 
 window <- 300
 members <- c("lasso", "rf", "bagging", "boost_d2")

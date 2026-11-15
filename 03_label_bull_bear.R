@@ -1,3 +1,8 @@
+# 03_label_bull_bear.R: dates bull/bear states with the Lunde-Timmermann filter (20% threshold) and builds the targets
+# y_h1, y_h3, y_h6 = the state 1, 3 and 6 months ahead (the bear chronology in report Table 5 is built in eda.R)
+# Input: data/sp500_daily.csv
+# Output: data/target.csv
+
 library(dplyr)
 library(lubridate)
 #########################

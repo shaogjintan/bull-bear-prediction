@@ -1,5 +1,5 @@
-# data from yahoo finance are loaded from quantmod as we do not have the subscription
-# to download from yahoo finance directly
+# 01_pull_sp500.R: downloads daily S&P 500 prices (^GSPC, 1950 onwards) from Yahoo Finance via quantmod
+# Output: data/sp500_daily.csv
 
 # install packages
 #options(install.packages.compile.from.source = "never")

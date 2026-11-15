@@ -1,9 +1,14 @@
+# bagging.R: bagging (random forest with mtry = all regressors), 500 trees, 25-year rolling window
+# Direct forecasts of the bear state at h = 1, 3, 6 for the 295 test origins (Jun 2001 - Dec 2025)
+# Also records Gini feature importance in every window (report Table 11)
+# Input:  data/panel.csv
+# Output: results/bagging_h<h>_w300.csv, tables/importance_bagging_top10_w300.csv
+
 library(dplyr)
 library(randomForest)
 
 data = read.csv("data/panel.csv")
 dir.create("results", showWarnings = FALSE)
-set.seed(4308)
 
 windows = c(300) # 25 year rolling windows
 horizons = c(1, 3, 6) #1,3,6 step-ahead forecasts
@@ -14,7 +19,7 @@ keep_lag0 = c("ret_m", "dtoy", "dtoat", "svar", "tms", "dfy", "state")
 lag0_cols = names(data)[!grepl("_l[0-9]+$", names(data))] #columns without an _l1.._l6 suffix
 dropped_columns = unique(c("date", "sp500", "y_h1", "y_h3", "y_h6",
                            setdiff(lag0_cols, keep_lag0)))
-X_all = as.matrix(select(data, -all_of(dropped_columns))) #Matrix of regressors, same as rf.R
+X_all = as.matrix(select(data, -all_of(dropped_columns))) 
 
 runbagging=function(y, X,lag){
   X_train= X[1:(nrow(X)-lag),] #drop the last h rows such that they are not used to train the model (to prevent leakage)
@@ -24,13 +29,13 @@ runbagging=function(y, X,lag){
   pred=predict(model,newdata=X_test,type="prob")[, "1"] #Generate the forecast
 
   imp= importance(model)[, "MeanDecreaseGini"]
-  imp= tapply(imp, sub("_l[0-9]+$", "", names(imp)), sum)   # Compute feature importance by summing importance of all lags
-  imp = imp / sum(imp)                                        # shares that add to 1
+  imp= tapply(imp, sub("_l[0-9]+$", "", names(imp)), sum) # Compute feature importance by summing importance of all lags
+  imp = imp / sum(imp)  # shares that add to 1
 
-  return(list("model"=model,"pred"=pred, "imp"=imp)) #Return the estimated model and h-step forecast
+  return(list("model"=model,"pred"=pred, "imp"=imp)) #Return the estimated model and h-step forecast and importance shares
 }
 
-
+# loop over the 295 origins from Jun 2001 to Dec 2025
 bagging.rolling.window=function(data,nprev,lag,rollingwindow_size){
   save.pred = numeric(nprev)
   save.imp = vector("list", nprev)              
@@ -66,7 +71,7 @@ for (W in windows) {
 
 top_features = imp_all |>
   group_by(h) |>
-  slice_max(mean_share, n = 10, with_ties = FALSE) |>
+  slice_max(mean_share, n = 10, with_ties = FALSE) |> # top 10 by avg importance share
   ungroup()
 
 write.csv(top_features, sprintf("tables/importance_bagging_top10_w%d.csv", windows[1]), row.names = FALSE)

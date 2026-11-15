@@ -1,3 +1,10 @@
+# 02_data_processing.R: cleans the three data sources and builds the predictors
+# S&P 500: daily closes -> month-end closes, monthly return, realised variance, distances from highs
+# FRED-MD: forward-fills gaps and applies the McCracken-Ng transformation codes; builds tms, dfy, earn_yld, payout
+# Goyal: keeps monthly variables, drops those built on the full sample (leakage) and duplicates of FRED-MD/S&P
+# Input: data/sp500_daily.csv, data/fred_md_2026-09.csv, data/goyal_data_2025.xlsx
+# Output: none saved; builds `dat` (all predictors by month), which 04_combined_data.R runs via source()
+
 library(quantmod)
 library(readxl)
 library(dplyr)

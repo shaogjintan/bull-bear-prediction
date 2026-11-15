@@ -28,14 +28,37 @@ Notes:
 | 14 | `pull_portfolio_data.R` | Downloads SPY returns and the T-bill rate for the portfolio exercise | `data/portfolio_data.csv` |
 | 15 | `portfolio.R` | Market-timing strategies vs buy-and-hold | `tables/portfolio_results.csv` |
 
+## Where to find the report's tables and figures
+
+| Report | Content | File | Made by |
+|---|---|---|---|
+| Table 1 | Predictor sources and selection | `tables/eda_predictors_by_source.csv` (counts; exclusion details written by hand) | `eda.R` |
+| Table 2 | Definitions of Goyal and constructed predictors | Written by hand (variables built in `02_data_processing.R`) | – |
+| Table 3 | Bull and bear months by decade | `tables/eda_by_decade.csv` | `eda.R` |
+| Table 4 | Pre-validation, validation and test sets | `tables/eda_periods.csv` | `eda.R` |
+| Table 5 | Bear markets identified by the LT filter | `tables/eda_bear_chronology.csv` | `eda.R` |
+| Table 6 | Number of boosting trees chosen, validation AUC | `results/boost_tuning_w300.csv` (best row per horizon and depth) | `boosting.R` |
+| Table 7 | AUC and QPS | `tables/results_auc_qps.csv` | `05_evaluate.R` |
+| Table 8 | Classification metrics, Panel A (0.5) and Panel B (rolling cutoff) | `tables/results_classification_050.csv`, `tables/results_classification_ybar.csv` | `05_evaluate.R` |
+| Table 9 | Diebold-Mariano tests | `results/dm_tests_w300.csv` | `06_dm_tests.R` |
+| Table 10 | LASSO selection frequency | `tables/lasso_selection_frequency_w300.csv` | `lasso.R` |
+| Table 11 | Tree-based feature importance (top 5) | `tables/importance_{rf,bagging,boosting}_top10_w300.csv` (RF and bagging in decimals, boosting in %) | `rf.R`, `bagging.R`, `boosting.R` |
+| Table 12 | Portfolio performance | `tables/portfolio_results.csv` | `portfolio.R` |
+| Figure 1 | S&P 500 with bear months shaded | `figures/sp500_bear_shading.png` | `eda.R` |
+| Figure 2 | AUC and QPS by horizon | `figures/auc_qps_by_horizon.png` | `05_evaluate.R` |
+| Figure 3 | Bear recall at both cutoffs | `figures/bear_recall.png` | `05_evaluate.R` |
+| Figure 4 | Predicted bear probability, h = 3 | `figures/bear_prob_h3.png` | `05_evaluate.R` |
+
+Other outputs (`figures/roc_curves.png`, `figures/bear_prob_h1.png`, `figures/bear_prob_h6.png`, `figures/dm_*.png`, `tables/eda_bull_vs_bear_means.csv`) are supplementary and not in the report.
+
 ## Folders
 
 | Folder | Contents |
 |---|---|
 | `data/` | Raw inputs (FRED-MD 2026-09 vintage, Goyal data, S&P 500, SPY) and the built panel |
 | `results/` | Out-of-sample forecasts (one file per model and horizon), tuning results, summary metrics and DM tests |
-| `tables/` | Tables used in the report |
-| `figures/` | Figures used in the report |
+| `tables/` | Tables for the report |
+| `figures/` | Figures for the report, plus supplementary figures |
 
 ## R packages
 

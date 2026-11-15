@@ -1,11 +1,14 @@
+# 04_combined_data.R: merges the predictors with the target and builds the modelling panel
+# Runs 02_data_processing.R, drops predictors not observed over the whole sample, adds lags 1-6 of every
+# predictor and of the state, and keeps Jul 1960 - Dec 2025 (786 months)
+# Input: data/target.csv (from 03_label_bull_bear.R), plus the inputs of 02_data_processing.R
+# Output: data/panel.csv
+
 library(dplyr)
 library(lubridate)
 #####################
 ## MERGE AND LAGS  ##
 #####################
-
-# needs 02_data_processing.R (builds `dat`, the predictors) and
-# 03_label_bull_bear.R (writes data/target.csv)
 source("02_data_processing.R")
 
 ## merge predictors with the bull/bear target ##

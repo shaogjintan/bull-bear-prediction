@@ -1,8 +1,10 @@
-library(sandwich)
+# 06_dm_tests.R: Diebold-Mariano tests of each model against the logit and persistence benchmarks (as in lecture 4)
+# Loss = squared error of the bear probability; d = loss(benchmark) - loss(model), so a positive t means the model is better
+# Newey-West standard errors with n^(1/3) = 7 lags; two-sided p-values
+# Input: results/<model>_h<h>_w300.csv, results/persistence_h<h>.csv (run after 07_ensemble.R)
+# Output: results/dm_tests_w300.csv (report Table 9), figures/dm_tstats.png, figures/dm_cumulative_vs_logit.png
 
-#DM tests like in lecture 4, loss is the squared error of the bear probability
-#d = loss of baseline - loss of model, positive t means the model is better
-#all models are tested on the same 295 months (Jun 2001 - Dec 2025), 25-year rolling window
+library(sandwich)
 
 window <- 300 #same window as 05_evaluate.R
 baselines <- c("logit", "persistence")
@@ -11,6 +13,7 @@ baselines <- c("logit", "persistence")
 files <- c(list.files("results", pattern = paste0("_h[136]_w", window, "\\.csv$"), full.names = TRUE),
            list.files("results", pattern = "^persistence_h[136]\\.csv$", full.names = TRUE))
 
+# stack all forecasts into one long table: model, h, date, actual, prob
 preds <- data.frame()
 for (f in files){
   name <- sub("\\.csv$", "", basename(f))
@@ -20,7 +23,7 @@ for (f in files){
                                    h = as.numeric(sub(".*_h([136])(_w[0-9]+)?$", "\\1", name)),
                                    date = res$date, actual = res$actual, prob = res$prob))
 }
-preds$loss <- (preds$prob - preds$actual)^2
+preds$loss <- (preds$prob - preds$actual)^2 #QPS
 
 model_order <- c("persistence", "logit", "lasso", "rf", "bagging", "boost_d2", "boost_d5",
                  "ensemble_avg", "ensemble_vote")
@@ -56,7 +59,7 @@ print(out |> transform(mean_d = round(mean_d, 4), t = round(t, 2), p = round(p, 
 write.csv(out, sprintf("results/dm_tests_w%d.csv", window), row.names = FALSE)
 
 ######################
-## DM PLOTS (QPS)   ##
+## DM PLOTS (QPS) (not in report)  ##
 ######################
 dir.create("figures", showWarnings = FALSE)
 dq <- if ("loss" %in% names(out)) out[out$loss == "qps", ] else out
@@ -77,7 +80,7 @@ for (hh in c(1, 3, 6)) {
           horiz = TRUE, las = 1, cex.names = 0.65, xlab = "DM t-statistic (positive = model better)",
           col = ifelse(dh$t > 0, "#1b9e77", "#d95f02"), main = paste0("h = ", hh),
           xlim = range(c(dh$t, -2.5, 2.5), na.rm = TRUE))
-  abline(v = c(-1.96, 1.96), lty = 2)
+  abline(v = c(-1.96, 1.96), lty = 2) # 5% level
 }
 dev.off()
 

@@ -1,3 +1,9 @@
+# 05_evaluate.R: evaluates every model's out-of-sample forecasts at h = 1, 3, 6
+# AUC and QPS for the probabilities; accuracy, precision, recall and F1 at the 0.5 and rolling cutoffs
+# (rolling cutoff = share of bear months in each 300-month training window)
+# Input:  results/<model>_h<h>_w300.csv, results/persistence_h<h>.csv (run after 07_ensemble.R)
+# Output: results/summary_w300.csv, tables/results_*.csv (report Tables 7-8), figures/ (report Figures 2-4)
+
 library(dplyr)
 library(pROC)
 

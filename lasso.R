@@ -1,3 +1,10 @@
+# lasso.R: LASSO logit (glmnet) on the same 853 regressors as the tree models, 25-year rolling window
+# The penalty is chosen by BIC in every window, using the training rows only (as in the lecture code func-lasso.R),
+# so no validation window is needed. Also records the variables selected in each window (report Table 10)
+# Input: data/panel.csv
+# Output: results/lasso_h<h>_w300.csv, results/lasso_selected_w300_h<h>.csv, results/lasso_lambda_w300_h<h>.csv,
+#         tables/lasso_selection_frequency_w300.csv
+
 library(dplyr)
 library(glmnet)
 library(pROC)

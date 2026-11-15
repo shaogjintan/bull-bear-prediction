@@ -1,9 +1,15 @@
+# rf.R: random forest, 500 trees, mtry = sqrt(853) = 29, 25-year rolling window
+# Direct forecasts of the bear state at h = 1, 3, 6 for the 295 test origins (Jun 2001 - Dec 2025),
+# plus Gini feature importance in every window (report Table 11)
+# Input: data/panel.csv
+# Output: results/rf_h<h>_w300.csv, tables/importance_rf_top10_w300.csv
+
 library(dplyr)
 library(randomForest)
 
 data = read.csv("data/panel.csv")
 dir.create("results", showWarnings = FALSE)
-set.seed(4308)
+dir.create("tables", showWarnings = FALSE)
 
 windows = c(300) # 25-year rolling windows
 horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
@@ -23,11 +29,9 @@ runrf=function(y, X,lag){
   y_train = factor(y[1:(nrow(X)-lag)], levels=c(0,1))
   X_test = X[nrow(X),,drop = FALSE] # Regressors that are used for the forecast
   model=randomForest(x=X_train,y=y_train,importance = FALSE,ntree=500, mtry = floor(sqrt(ncol(X_train)))) 
-
   imp= importance(model)[, "MeanDecreaseGini"]
-  imp= tapply(imp, sub("_l[0-9]+$", "", names(imp)), sum)   # Compute feature importance by summing importance of all lags
-  imp = imp / sum(imp)                                        # shares that add to 1
-
+  imp= tapply(imp, sub("_l[0-9]+$", "", names(imp)), sum) # Compute feature importance by summing importance of all lags
+  imp = imp / sum(imp) # shares that add to 1
   pred=predict(model,newdata=X_test,type="prob")[, "1"] # Generate the forecast
   return(list("model"=model,"pred"=pred, "imp"=imp)) # Return the estimated model and h-step forecast
 

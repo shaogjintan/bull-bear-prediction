@@ -1,19 +1,24 @@
+# boosting.R: gradient boosting (XGBoost) at tree depths 2 and 5, learning rate 0.05, 25-year rolling window
+# Step 1: tunes the number of trees (25-1000) by AUC on a validation window (Dec 1985 to h months before the test)
+# Step 2: forecasts the 295 test origins (Jun 2001 - Dec 2025) with the chosen number of trees, and records gain importance
+# Input: data/panel.csv
+# Output: results/boost_tuning_w300.csv, results/boost_d<d>_h<h>_w300.csv, tables/importance_boosting_top10_w300.csv
+
 library(dplyr)
 library(xgboost)
-#library(caret)
 library(pROC)
 
 data = read.csv("data/panel.csv")
 data$date = as.Date(data$date)
 dir.create("results", showWarnings = FALSE)
-set.seed(4308)
+set.seed(4308) # keep as safeguard
 
 params <- list(
   nthread = parallel::detectCores() - 1, 
   objective = "binary:logistic"
 )
 
-rollingwindow_size = 300 # 25-year rolling window (40 years leaves no room for validation before 2001)
+rollingwindow_size = 300 # 25-year rolling window
 horizons = c(1, 3, 6) # 1,3,6 step-ahead forecasts
 
 # Test window: Jun 2001 - Dec 2025, the same 295 months as every other model
@@ -59,13 +64,13 @@ runboosting=function(y, X,lag,params,nrounds){
   for (i in 1:length(nrounds)) {
     predicted[i] = predict(model, X_test, iterationrange = c(1, nrounds[i] + shift)) # forecast using the first nrounds[i] trees
   }
-  gain = xgb.importance(model = model)     
+  gain = xgb.importance(model = model)  # gain importance: share of the total gain from each variable, summed over its lags    
   base = sub("_l[0-9]+$", "", colnames(X))                          
   imp = tapply(gain$Gain, factor(sub("_l[0-9]+$", "", gain$Feature), levels = unique(base)),
                sum, default = 0)                         
   imp = imp / sum(imp)                                                
 
-  return(list("model"= model,"pred"= predicted, "imp"= imp)) # Return the estimated model and h-step forecast
+  return(list("model"= model,"pred"= predicted, "imp"= imp)) # Return the estimated model and h-step forecast and importance shares
 }
 
 boosting.rolling.window=function(data,nprev,lag,end_row,params,nrounds){

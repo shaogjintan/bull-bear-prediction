@@ -1,3 +1,8 @@
+# portfolio.R: market-timing exercise, July 2001 - Dec 2025, using the h = 1 forecasts
+# Each month, hold SPY unless the forecast bear probability is above the cutoff (0.5 or rolling), then hold T-bills
+# Input: data/portfolio_data.csv, data/panel.csv, results/<model>_h1_w300.csv
+# Output: tables/portfolio_results.csv (report Table 12)
+
 portfolio <- read.csv("data/portfolio_data.csv")
 portfolio$date <- as.Date(portfolio$date)
 
@@ -90,6 +95,7 @@ comparison[, "Max_Drawdown"] <- comparison[, "Max_Drawdown"] * 100
 
 print(round(comparison, 2))
 
+dir.create("tables", showWarnings = FALSE)
 write.csv(round(comparison, 2), "tables/portfolio_results.csv", row.names = TRUE)
 
 

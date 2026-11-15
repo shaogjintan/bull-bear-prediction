@@ -1,4 +1,9 @@
+# logit.R: Nyberg (2013) benchmark logit (state, return, term spread, ΔDP), 25-year rolling window
+# Input: data/panel.csv
+# Output: results/logit_h<h>_w300.csv
+
 data <- read.csv("data/panel.csv")
+dir.create("results", showWarnings = FALSE)
 
 #Nyberg uses the 8th lag of the first difference of the dividend-price ratio
 data$ddp <- c(NA, diff(data$gw_d.p))
